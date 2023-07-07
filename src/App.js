@@ -7,6 +7,8 @@ import { ThemeProvider } from "@mui/material/styles";
 
 const ChatApp = () => {
   const [messages, setMessages] = useState([]);
+  const [channel, setChannel] = useState(null);
+  const [isBroadcasting, setIsBroadcasting] = useState(false);
 
   useEffect(() => {
     const simulatedConversation = [
@@ -15,11 +17,46 @@ const ChatApp = () => {
       { author: "User A", text: "How are you?", isMine: false },
     ];
     setMessages(simulatedConversation);
+
+    window.addEventListener("message", handleMessage);
+
+    return () => {
+      window.removeEventListener("message", handleMessage);
+    };
   }, []);
+
+  const handleMessage = (event) => {
+    const { type, data, source } = event.data;
+
+    // Exclude messages from the current tab
+    if (type === "chat-message" && source !== window) {
+      const newMessage = { author: "User B", text: data, isMine: false };
+      setMessages((prevMessages) => [...prevMessages, newMessage]);
+    }
+  };
 
   const handleSendMessage = (text) => {
     const newMessage = { author: "User A", text, isMine: true };
     setMessages((prevMessages) => [...prevMessages, newMessage]);
+
+    if (!isBroadcasting) {
+      setIsBroadcasting(true);
+
+      // Broadcast the simplified message data to other tabs
+      window.postMessage(
+        { type: "chat-message", data: text, source: "app" },
+        "*"
+      );
+
+      // Delay resetting the broadcasting flag to prevent immediate self-reception
+      setTimeout(() => {
+        setIsBroadcasting(false);
+      }, 100);
+    }
+  };
+
+  const handleChannelCreated = (drone) => {
+    setChannel(drone.subscribe("chat-room"));
   };
 
   return (
@@ -34,7 +71,10 @@ const ChatApp = () => {
           </Typography>
         </Box>
         <Messages messages={messages} />
-        <Input onSendMessage={handleSendMessage} />
+        <Input
+          onSendMessage={handleSendMessage}
+          onChannelCreated={handleChannelCreated}
+        />
       </Box>
     </ThemeProvider>
   );
