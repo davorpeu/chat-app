@@ -51,9 +51,7 @@ const ChatApp = () => {
 
         setMessages((prevMessages) => {
           const existingMessage = prevMessages.find(
-            (message) =>
-              message.author === newMessage.author &&
-              message.text === newMessage.text
+            (message) => message.author === newMessage.author
           );
 
           // If the message doesn't exist in the previous messages
