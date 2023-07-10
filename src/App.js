@@ -41,21 +41,18 @@ const ChatApp = () => {
         data !== ""
       ) {
         const newMessage = {
-          author:
-            member.clientData && member.clientData.username
-              ? member.clientData.username
-              : member.id,
+          author: member.username || "Unknown",
           text: data,
           isMine: false,
         };
 
         setMessages((prevMessages) => {
           const existingMessage = prevMessages.find(
-            (message) => message.author === newMessage.author
+            (message) =>
+              message.author === newMessage.author &&
+              message.text === newMessage.text
           );
 
-          // If the message doesn't exist in the previous messages
-          // and it is not the sender's own message, add it to the messages
           if (!existingMessage && newMessage.author !== drone.clientId) {
             return [...prevMessages, newMessage];
           }
@@ -70,19 +67,21 @@ const ChatApp = () => {
   }, []);
 
   const handleSendMessage = (text) => {
-    if (drone) {
+    if (drone && currentMember) {
+      // Add a null check for currentMember
       const newMessage = {
-        author: currentMember.username,
+        author: currentMember.username || "Unknown", // Use a fallback value if username is null
         text: text,
         isMine: true,
       };
 
       setMessages((prevMessages) => {
         const existingMessage = prevMessages.find(
-          (message) => message.author === newMessage.author
+          (message) =>
+            message.author === newMessage.author &&
+            message.text === newMessage.text
         );
 
-        // If the message doesn't exist in the previous messages, add it
         if (!existingMessage) {
           return [...prevMessages, newMessage];
         }
