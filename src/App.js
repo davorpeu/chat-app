@@ -7,56 +7,63 @@ import { ThemeProvider } from "@mui/material/styles";
 
 const ChatApp = () => {
   const [messages, setMessages] = useState([]);
-  const [channel, setChannel] = useState(null);
-  const [isBroadcasting, setIsBroadcasting] = useState(false);
+  const [drone, setDrone] = useState(null);
+  const [room, setRoom] = useState(null);
+  const [currentMember, setCurrentMember] = useState(null);
+  const channel_id = process.env.REACT_APP_CHANNEL_ID;
 
   useEffect(() => {
-    const simulatedConversation = [
-      { author: "User A", text: "Hello!", isMine: false },
-      { author: "User B", text: "Hi there!", isMine: false },
-      { author: "User A", text: "How are you?", isMine: false },
-    ];
-    setMessages(simulatedConversation);
+    const drone = new window.Scaledrone(channel_id);
+    setDrone(drone);
 
-    window.addEventListener("message", handleMessage);
+    drone.on("open", (error) => {
+      if (error) {
+        console.error(error);
+        return;
+      }
+      const member = {
+        id: drone.clientId,
+        username: randomName(),
+        color: randomColor(),
+      };
+      setCurrentMember(member);
+    });
+
+    const room = drone.subscribe("observable-room");
+    setRoom(room);
+
+    room.on("data", (data, member) => {
+      if (member.id !== drone.clientId && data !== "") {
+        const newMessage = {
+          author: member.id,
+          text: data,
+          isMine: member.id === drone.clientId ? true : false,
+        };
+        setMessages((prevMessages) => {
+          // Check if the message already exists in the state
+          const existingMessage = prevMessages.find(
+            (message) => message.author === member.id && message.text === data
+          );
+          if (!existingMessage) {
+            return [...prevMessages, newMessage];
+          }
+          return prevMessages;
+        });
+      }
+    });
 
     return () => {
-      window.removeEventListener("message", handleMessage);
+      drone.close();
     };
   }, []);
 
-  const handleMessage = (event) => {
-    const { type, data, source } = event.data;
-
-    // Exclude messages from the current tab
-    if (type === "chat-message" && source !== window) {
-      const newMessage = { author: "User B", text: data, isMine: false };
-      setMessages((prevMessages) => [...prevMessages, newMessage]);
-    }
-  };
-
   const handleSendMessage = (text) => {
-    const newMessage = { author: "User A", text, isMine: true };
-    setMessages((prevMessages) => [...prevMessages, newMessage]);
-
-    if (!isBroadcasting) {
-      setIsBroadcasting(true);
-
-      // Broadcast the simplified message data to other tabs
-      window.postMessage(
-        { type: "chat-message", data: text, source: "app" },
-        "*"
-      );
-
-      // Delay resetting the broadcasting flag to prevent immediate self-reception
-      setTimeout(() => {
-        setIsBroadcasting(false);
-      }, 100);
+    if (drone) {
+      drone.publish({
+        room: "observable-room",
+        message: text,
+      });
     }
-  };
-
-  const handleChannelCreated = (drone) => {
-    setChannel(drone.subscribe("chat-room"));
   };
 
   return (
@@ -70,14 +77,154 @@ const ChatApp = () => {
             Chat App
           </Typography>
         </Box>
-        <Messages messages={messages} />
-        <Input
-          onSendMessage={handleSendMessage}
-          onChannelCreated={handleChannelCreated}
-        />
+        <Messages messages={messages} currentMember={currentMember} />
+        <Input onSendMessage={handleSendMessage} />
       </Box>
     </ThemeProvider>
   );
 };
+
+// Random name and color functions from the tutorial
+function randomName() {
+  const adjectives = [
+    "autumn",
+    "hidden",
+    "bitter",
+    "misty",
+    "silent",
+    "empty",
+    "dry",
+    "dark",
+    "summer",
+    "icy",
+    "delicate",
+    "quiet",
+    "white",
+    "cool",
+    "spring",
+    "winter",
+    "patient",
+    "twilight",
+    "dawn",
+    "crimson",
+    "wispy",
+    "weathered",
+    "blue",
+    "billowing",
+    "broken",
+    "cold",
+    "damp",
+    "falling",
+    "frosty",
+    "green",
+    "long",
+    "late",
+    "lingering",
+    "bold",
+    "little",
+    "morning",
+    "muddy",
+    "old",
+    "red",
+    "rough",
+    "still",
+    "small",
+    "sparkling",
+    "throbbing",
+    "shy",
+    "wandering",
+    "withered",
+    "wild",
+    "black",
+    "young",
+    "holy",
+    "solitary",
+    "fragrant",
+    "aged",
+    "snowy",
+    "proud",
+    "floral",
+    "restless",
+    "divine",
+    "polished",
+    "ancient",
+    "purple",
+    "lively",
+    "nameless",
+  ];
+  const nouns = [
+    "waterfall",
+    "river",
+    "breeze",
+    "moon",
+    "rain",
+    "wind",
+    "sea",
+    "morning",
+    "snow",
+    "lake",
+    "sunset",
+    "pine",
+    "shadow",
+    "leaf",
+    "dawn",
+    "glitter",
+    "forest",
+    "hill",
+    "cloud",
+    "meadow",
+    "sun",
+    "glade",
+    "bird",
+    "brook",
+    "butterfly",
+    "bush",
+    "dew",
+    "dust",
+    "field",
+    "fire",
+    "flower",
+    "firefly",
+    "feather",
+    "grass",
+    "haze",
+    "mountain",
+    "night",
+    "pond",
+    "darkness",
+    "snowflake",
+    "silence",
+    "sound",
+    "sky",
+    "shape",
+    "surf",
+    "thunder",
+    "violet",
+    "water",
+    "wildflower",
+    "wave",
+    "water",
+    "resonance",
+    "sun",
+    "wood",
+    "dream",
+    "cherry",
+    "tree",
+    "fog",
+    "frost",
+    "voice",
+    "paper",
+    "frog",
+    "smoke",
+    "star",
+  ];
+  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
+  const noun = nouns[Math.floor(Math.random() * nouns.length)];
+  return adjective + noun;
+}
+
+function randomColor() {
+  return "#" + Math.floor(Math.random() * 0xffffff).toString(16);
+}
 
 export default ChatApp;
