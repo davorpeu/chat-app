@@ -4,6 +4,7 @@ import Input from "./components/Input";
 import Messages from "./components/Messages";
 import theme from "./theme/theme";
 import { ThemeProvider } from "@mui/material/styles";
+import { randomName, randomColor } from "./utils/Utils";
 
 const ChatApp = () => {
   const [messages, setMessages] = useState([]);
@@ -33,18 +34,31 @@ const ChatApp = () => {
     setRoom(room);
 
     room.on("data", (data, member) => {
-      if (member.id !== drone.clientId && data !== "") {
+      if (
+        drone &&
+        drone.clientId &&
+        member.id !== drone.clientId &&
+        data !== ""
+      ) {
         const newMessage = {
-          author: member.id,
+          author:
+            member.clientData && member.clientData.username
+              ? member.clientData.username
+              : member.id,
           text: data,
-          isMine: member.id === drone.clientId ? true : false,
+          isMine: false,
         };
+
         setMessages((prevMessages) => {
-          // Check if the message already exists in the state
           const existingMessage = prevMessages.find(
-            (message) => message.author === member.id && message.text === data
+            (message) =>
+              message.author === newMessage.author &&
+              message.text === newMessage.text
           );
-          if (!existingMessage) {
+
+          // If the message doesn't exist in the previous messages
+          // and it is not the sender's own message, add it to the messages
+          if (!existingMessage && newMessage.author !== drone.clientId) {
             return [...prevMessages, newMessage];
           }
           return prevMessages;
@@ -59,6 +73,24 @@ const ChatApp = () => {
 
   const handleSendMessage = (text) => {
     if (drone) {
+      const newMessage = {
+        author: currentMember.username,
+        text: text,
+        isMine: true,
+      };
+
+      setMessages((prevMessages) => {
+        const existingMessage = prevMessages.find(
+          (message) => message.author === newMessage.author
+        );
+
+        // If the message doesn't exist in the previous messages, add it
+        if (!existingMessage) {
+          return [...prevMessages, newMessage];
+        }
+        return prevMessages;
+      });
+
       drone.publish({
         room: "observable-room",
         message: text,
@@ -83,148 +115,5 @@ const ChatApp = () => {
     </ThemeProvider>
   );
 };
-
-// Random name and color functions from the tutorial
-function randomName() {
-  const adjectives = [
-    "autumn",
-    "hidden",
-    "bitter",
-    "misty",
-    "silent",
-    "empty",
-    "dry",
-    "dark",
-    "summer",
-    "icy",
-    "delicate",
-    "quiet",
-    "white",
-    "cool",
-    "spring",
-    "winter",
-    "patient",
-    "twilight",
-    "dawn",
-    "crimson",
-    "wispy",
-    "weathered",
-    "blue",
-    "billowing",
-    "broken",
-    "cold",
-    "damp",
-    "falling",
-    "frosty",
-    "green",
-    "long",
-    "late",
-    "lingering",
-    "bold",
-    "little",
-    "morning",
-    "muddy",
-    "old",
-    "red",
-    "rough",
-    "still",
-    "small",
-    "sparkling",
-    "throbbing",
-    "shy",
-    "wandering",
-    "withered",
-    "wild",
-    "black",
-    "young",
-    "holy",
-    "solitary",
-    "fragrant",
-    "aged",
-    "snowy",
-    "proud",
-    "floral",
-    "restless",
-    "divine",
-    "polished",
-    "ancient",
-    "purple",
-    "lively",
-    "nameless",
-  ];
-  const nouns = [
-    "waterfall",
-    "river",
-    "breeze",
-    "moon",
-    "rain",
-    "wind",
-    "sea",
-    "morning",
-    "snow",
-    "lake",
-    "sunset",
-    "pine",
-    "shadow",
-    "leaf",
-    "dawn",
-    "glitter",
-    "forest",
-    "hill",
-    "cloud",
-    "meadow",
-    "sun",
-    "glade",
-    "bird",
-    "brook",
-    "butterfly",
-    "bush",
-    "dew",
-    "dust",
-    "field",
-    "fire",
-    "flower",
-    "firefly",
-    "feather",
-    "grass",
-    "haze",
-    "mountain",
-    "night",
-    "pond",
-    "darkness",
-    "snowflake",
-    "silence",
-    "sound",
-    "sky",
-    "shape",
-    "surf",
-    "thunder",
-    "violet",
-    "water",
-    "wildflower",
-    "wave",
-    "water",
-    "resonance",
-    "sun",
-    "wood",
-    "dream",
-    "cherry",
-    "tree",
-    "fog",
-    "frost",
-    "voice",
-    "paper",
-    "frog",
-    "smoke",
-    "star",
-  ];
-  const adjective = adjectives[Math.floor(Math.random() * adjectives.length)];
-  const noun = nouns[Math.floor(Math.random() * nouns.length)];
-  return adjective + noun;
-}
-
-function randomColor() {
-  return "#" + Math.floor(Math.random() * 0xffffff).toString(16);
-}
 
 export default ChatApp;
