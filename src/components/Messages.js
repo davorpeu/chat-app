@@ -16,17 +16,9 @@ const useStyles = makeStyles((theme) => ({
     borderRadius: theme.shape.borderRadius,
     maxWidth: "75%",
   },
-  myMessageBubble: {
-    backgroundColor: theme.palette.primary.main,
-    color: theme.palette.primary.contrastText,
-  },
-  otherUserMessageBubble: {
-    backgroundColor: theme.palette.secondary.main,
-    color: theme.palette.secondary.contrastText,
-  },
 }));
 
-const Messages = ({ messages }) => {
+const Messages = ({ messages, currentMember }) => {
   const classes = useStyles();
   const theme = useTheme();
 
@@ -40,23 +32,23 @@ const Messages = ({ messages }) => {
           }`}
         >
           <Paper
-            className={`${classes.messageBubble} ${
-              message.isMine
-                ? classes.myMessageBubble
-                : classes.otherUserMessageBubble
-            }`}
+            className={classes.messageBubble}
             elevation={3}
             style={{
               backgroundColor: message.isMine
                 ? theme.palette.primary.main
-                : theme.palette.secondary.main,
+                : currentMember.color,
               color: message.isMine
                 ? theme.palette.primary.contrastText
-                : theme.palette.secondary.contrastText,
+                : theme.palette.getContrastText(currentMember.color),
             }}
           >
             <Typography color="inherit">
-              {`${message.author}: ${message.text}`}
+              {`${
+                message.author === currentMember.id
+                  ? currentMember.username
+                  : message.author
+              }: ${message.text}`}
             </Typography>
           </Paper>
         </Box>

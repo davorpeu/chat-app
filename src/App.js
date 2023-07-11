@@ -14,72 +14,76 @@ const ChatApp = () => {
   const channel_id = process.env.REACT_APP_CHANNEL_ID;
 
   useEffect(() => {
-    const drone = new window.Scaledrone(channel_id);
-    setDrone(drone);
+    const initializeDrone = async () => {
+      const username = randomName(); // Generate a random username
+      const drone = new window.Scaledrone(channel_id, {
+        data: { username }, // Set the generated username as part of the data object
+      });
+      setDrone(drone);
 
-    drone.on("open", (error) => {
-      if (error) {
-        console.error(error);
-        return;
-      }
-      const member = {
-        id: drone.clientId,
-        username: randomName(),
-        color: randomColor(),
-      };
-      setCurrentMember(member);
-    });
-
-    const room = drone.subscribe("observable-room");
-    setRoom(room);
-
-    room.on("data", (data, member) => {
-      if (
-        drone &&
-        drone.clientId &&
-        member.id !== drone.clientId &&
-        data !== ""
-      ) {
-        const newMessage = {
-          author: member.username || "Unknown",
-          text: data,
-          isMine: false,
+      drone.on("open", (error) => {
+        if (error) {
+          console.error(error);
+          return;
+        }
+        const member = {
+          id: drone.clientId,
+          username, // Use the generated username
+          color: randomColor(),
         };
+        setCurrentMember(member);
+      });
 
-        setMessages((prevMessages) => {
-          const existingMessage = prevMessages.find(
-            (message) =>
-              message.author === newMessage.author &&
-              message.text === newMessage.text
-          );
+      const room = drone.subscribe("observable-room");
+      setRoom(room);
 
-          if (!existingMessage && newMessage.author !== drone.clientId) {
-            return [...prevMessages, newMessage];
-          }
-          return prevMessages;
-        });
-      }
-    });
+      room.on("data", (data, member) => {
+        if (
+          drone &&
+          drone.clientId &&
+          member.id !== drone.clientId &&
+          data !== ""
+        ) {
+          const newMessage = {
+            author: member.clientData ? member.clientData.username : "Unknown",
+            text: data,
+            isMine: false,
+          };
 
-    return () => {
-      drone.close();
+          setMessages((prevMessages) => {
+            const existingMessage = prevMessages.find(
+              (message) =>
+                message.author === newMessage.author &&
+                message.text === newMessage.text
+            );
+
+            if (!existingMessage) {
+              return [...prevMessages, newMessage];
+            }
+            return prevMessages;
+          });
+        }
+      });
+
+      return () => {
+        drone.close();
+      };
     };
+
+    initializeDrone();
   }, []);
 
   const handleSendMessage = (text) => {
     if (drone && currentMember) {
-      // Add a null check for currentMember
       const newMessage = {
-        author: currentMember.username || "Unknown", // Use a fallback value if username is null
+        author: currentMember.username,
         text: text,
         isMine: true,
       };
 
       setMessages((prevMessages) => {
         const existingMessage = prevMessages.find(
-          (message) =>
-            message.author === newMessage.author &&
-            message.text === newMessage.text
+          (message) => message.author === newMessage.author
         );
 
         if (!existingMessage) {
